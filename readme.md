@@ -1,4 +1,4 @@
-# Relay — Distributed, Resilient Real-Time Chat Backend
+# Distributed Chat Application — A Resilient, Real-Time Chat Backend
 
 A Spring Boot chat backend built to explore how real chat systems scale
 and survive failure — not just send messages between two users locally.
@@ -124,8 +124,8 @@ these are the areas with the most to talk through in an interview:
 ## Running locally
 
 ```bash
-git clone https://github.com/<you>/relay.git
-cd relay
+git clone https://github.com/dalipshakya-dev/Distributed-Chat-Application.git
+cd Distributed-Chat-Application
 cp docker-compose.env.example docker-compose.env   # fill in your own secrets
 docker compose up -d --build
 ```
