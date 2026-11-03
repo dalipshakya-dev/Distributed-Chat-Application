@@ -101,7 +101,7 @@ public class UserService implements UserInterface {
             return true;
         } catch (ResourceNotFoundException r) {
             log.warn("Failed attempt to delete user by id {}", id);
-            return false;
+            throw r;
         }
     }
 

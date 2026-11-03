@@ -28,6 +28,7 @@ class UserServiceTest {
     private DtoMapper dtoMapper;
 
     private UserService userService;
+    @Mock
     private  CacheManager cacheManager;
 
 
@@ -119,11 +120,11 @@ class UserServiceTest {
     }
 
     @Test
-    void deleteUser_returnsFalseWhenNotFound(){
+    void deleteUser_throwsResourceNotFound_whenUserDoesNotExist(){
         when(usersRepository.findById(99L)).thenReturn(Optional.empty());
 
-        boolean result = userService.deleteUser(99L,1L);
-        assertFalse(result);
+        assertThrows(ResourceNotFoundException.class,
+                () -> userService.deleteUser(99L, 99L));
     }
 
 
