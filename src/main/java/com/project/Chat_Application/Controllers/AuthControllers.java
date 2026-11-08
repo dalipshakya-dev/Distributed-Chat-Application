@@ -3,10 +3,12 @@ package com.project.Chat_Application.Controllers;
 
 
 
+import com.project.Chat_Application.Config.RateLimiterService;
 import com.project.Chat_Application.Dto.SecurityDto.Request.LoginRequestDto;
 import com.project.Chat_Application.Dto.SecurityDto.Request.RegisterRequestDto;
 import com.project.Chat_Application.Dto.SecurityDto.Response.AuthResponseDto;
 import com.project.Chat_Application.Entities.User;
+import com.project.Chat_Application.Exceptions.RateLimitExceededException;
 import com.project.Chat_Application.Exceptions.ResourceNotFoundException;
 import com.project.Chat_Application.Repositories.UsersRepository;
 import com.project.Chat_Application.Security.JwtUtil;
@@ -21,6 +23,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthControllers {
@@ -30,13 +34,14 @@ public class AuthControllers {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final RateLimiterService rateLimiterService;
 
-    public AuthControllers(UsersRepository usersRepository, PasswordEncoder passwordEncoder,
-                          AuthenticationManager authenticationManager, JwtUtil jwtUtil) {
+    public AuthControllers(UsersRepository usersRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtUtil jwtUtil, RateLimiterService rateLimiterService) {
         this.usersRepository = usersRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
+        this.rateLimiterService = rateLimiterService;
     }
 
     @PostMapping("/register")
@@ -62,6 +67,13 @@ public class AuthControllers {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDto> login(@Valid @RequestBody LoginRequestDto dto) {
+
+        String rateLimitKey = "login:" + dto.getUsername();
+        if (!rateLimiterService.isAllowed(rateLimitKey, 5, Duration.ofMinutes(1))) {
+            log.warn("Rate limit exceeded for login attempts: {}", dto.getUsername());
+            throw new RateLimitExceededException("Too many login attempts. Please try again later.");
+        }
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword())
@@ -76,6 +88,6 @@ public class AuthControllers {
 
         String token = jwtUtil.generateToken(user.getUsername());
         log.info("Login successful: {}", dto.getUsername());
-        return ResponseEntity.ok(new AuthResponseDto (user.getId(),user.getUsername(),token, "Bearer" ));
+        return ResponseEntity.ok(new AuthResponseDto(user.getId(), user.getUsername(), token, "Bearer"));
     }
 }

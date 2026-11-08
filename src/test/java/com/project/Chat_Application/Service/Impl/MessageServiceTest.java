@@ -2,6 +2,7 @@ package com.project.Chat_Application.Service.Impl;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.Chat_Application.Config.RateLimiterService;
 import com.project.Chat_Application.Dto.DtoMapper.DtoMapper;
 import com.project.Chat_Application.Dto.Request.MessageRequestDto;
 import com.project.Chat_Application.Dto.Response.MessageResponseDto;
@@ -49,6 +50,7 @@ class MessageServiceTest {
 
     @Mock private KafkaTemplate<String, String> kafkaTemplate;
     @Mock private ObjectMapper objectMapper;
+    @Mock private RateLimiterService rateLimiterService;
 
     private MessageService messageService;
 
@@ -57,7 +59,7 @@ class MessageServiceTest {
         MockitoAnnotations.openMocks(this);
         messageService = new MessageService(dtoMapper, messageRepository, usersRepository,
                 conversationRepository, conversationParticipantInterface,
-                kafkaTemplate, objectMapper);
+                kafkaTemplate, objectMapper,rateLimiterService);
     }
 
     @Test
@@ -74,6 +76,7 @@ class MessageServiceTest {
 
         when(usersRepository.findById(1L)).thenReturn(Optional.of(user));
         when(conversationRepository.findById(1L)).thenReturn(Optional.of(conversation));
+        when(rateLimiterService.isAllowed(anyString(), anyInt(), any())).thenReturn(true);
 
         Message fakeSavedMessage = new Message();
         fakeSavedMessage.setId(1L);

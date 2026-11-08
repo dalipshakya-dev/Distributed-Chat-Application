@@ -2,6 +2,7 @@ package com.project.Chat_Application.Service.Impl;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.Chat_Application.Config.RateLimiterService;
 import com.project.Chat_Application.Dto.DtoMapper.DtoMapper;
 import com.project.Chat_Application.Dto.Request.MessageRequestDto;
 import com.project.Chat_Application.Dto.Response.MessageResponseDto;
@@ -12,6 +13,7 @@ import com.project.Chat_Application.Entities.User;
 import com.project.Chat_Application.Entities.enums.MessageStatus;
 import com.project.Chat_Application.Events.KafkaTopics;
 import com.project.Chat_Application.Events.MessageSentEvent;
+import com.project.Chat_Application.Exceptions.RateLimitExceededException;
 import com.project.Chat_Application.Exceptions.ResourceNotFoundException;
 import com.project.Chat_Application.Observability.CorrelationId;
 import com.project.Chat_Application.Repositories.ConversationRepository;
@@ -28,6 +30,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -41,9 +44,10 @@ public class MessageService implements MessageInterface {
     private final ConversationParticipantInterface conversationParticipantInterface;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final RateLimiterService rateLimiterService;
 
 
-    public MessageService(DtoMapper dtoMapper, MessageRepository messageRepository, UsersRepository usersRepository, ConversationRepository conversationRepository, ConversationParticipantInterface conversationParticipantInterface, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
+    public MessageService(DtoMapper dtoMapper, MessageRepository messageRepository, UsersRepository usersRepository, ConversationRepository conversationRepository, ConversationParticipantInterface conversationParticipantInterface, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper, RateLimiterService rateLimiterService) {
         this.dtoMapper = dtoMapper;
         this.messageRepository = messageRepository;
         this.usersRepository = usersRepository;
@@ -51,10 +55,17 @@ public class MessageService implements MessageInterface {
         this.conversationParticipantInterface = conversationParticipantInterface;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
+        this.rateLimiterService = rateLimiterService;
     }
 
     @Override
     public MessageResponseDto createMessage(MessageRequestDto dto, Long senderId) {
+        String rateLimitKey = "message:" + senderId;
+        if (!rateLimiterService.isAllowed(rateLimitKey, 20, Duration.ofSeconds(10))) {
+            log.warn("Rate limit exceeded for message creation by user {}", senderId);
+            throw new RateLimitExceededException("You are sending messages too quickly. Please slow down.");
+        }
+
         Message messageToSave = convertToEntity(dto);
         User sender = usersRepository.findById(senderId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not Found!"));

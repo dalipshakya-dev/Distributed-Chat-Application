@@ -83,4 +83,10 @@ public class GlobalExceptionHandler {
         );
         return new ResponseEntity<>(error, status);
     }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleRateLimitExceeded(RateLimitExceededException ex) {
+        return buildError(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), null);
+    }
+
 }
