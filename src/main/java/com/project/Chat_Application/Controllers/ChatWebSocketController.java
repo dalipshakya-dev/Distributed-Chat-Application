@@ -6,6 +6,7 @@ import com.project.Chat_Application.Config.ChatStreamPublisher;
 import com.project.Chat_Application.Dto.Request.MessageRequestDto;
 import com.project.Chat_Application.Dto.Response.MessageResponseDto;
 import com.project.Chat_Application.Dto.Response.UsersResponseDto;
+import com.project.Chat_Application.Exceptions.RateLimitExceededException;
 import com.project.Chat_Application.Observability.CorrelationId;
 import com.project.Chat_Application.Service.Interfaces.ConversationParticipantInterface;
 import com.project.Chat_Application.Service.Interfaces.MessageInterface;
@@ -73,5 +74,19 @@ public class ChatWebSocketController {
     public String handleAccessDenied(AccessDeniedException ex) {
         log.warn("STOMP access denied: {}", ex.getMessage());
         return ex.getMessage();
+    }
+
+    @MessageExceptionHandler(RateLimitExceededException.class)
+    @SendToUser("/queue/errors")
+    public String handleRateLimitExceeded(RateLimitExceededException ex) {
+        log.warn("STOMP rate limit exceeded: {}", ex.getMessage());
+        return ex.getMessage();
+    }
+
+    @MessageExceptionHandler(Exception.class)
+    @SendToUser("/queue/errors")
+    public String handleGeneral(Exception ex) {
+        log.error("Unhandled STOMP exception", ex);
+        return "Something went wrong. Please try again.";
     }
 }
