@@ -1,11 +1,8 @@
 package com.project.Chat_Application.Config;
-
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Set;
 
 @Component
 public class RateLimiterService {
