@@ -1,7 +1,5 @@
 package com.project.Chat_Application.Dto.SecurityDto.Response;
 
-
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,5 +12,5 @@ public class AuthResponseDto {
     private String username;
     private String token;
     private String tokenType;
-
+    private String refreshToken;
 }

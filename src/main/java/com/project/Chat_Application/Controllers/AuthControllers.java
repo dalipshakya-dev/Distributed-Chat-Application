@@ -1,10 +1,9 @@
 package com.project.Chat_Application.Controllers;
 
-
-
-
 import com.project.Chat_Application.Config.RateLimiterService;
+import com.project.Chat_Application.Config.RefreshTokenService;
 import com.project.Chat_Application.Dto.SecurityDto.Request.LoginRequestDto;
+import com.project.Chat_Application.Dto.SecurityDto.Request.RefreshRequestDto;
 import com.project.Chat_Application.Dto.SecurityDto.Request.RegisterRequestDto;
 import com.project.Chat_Application.Dto.SecurityDto.Response.AuthResponseDto;
 import com.project.Chat_Application.Entities.User;
@@ -35,19 +34,23 @@ public class AuthControllers {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final RateLimiterService rateLimiterService;
+    private final RefreshTokenService refreshTokenService;
 
-    public AuthControllers(UsersRepository usersRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtUtil jwtUtil, RateLimiterService rateLimiterService) {
+    public AuthControllers(UsersRepository usersRepository, PasswordEncoder passwordEncoder,
+                           AuthenticationManager authenticationManager, JwtUtil jwtUtil,
+                           RateLimiterService rateLimiterService, RefreshTokenService refreshTokenService) {
         this.usersRepository = usersRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.rateLimiterService = rateLimiterService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDto> register(@Valid @RequestBody RegisterRequestDto dto) {
         if (usersRepository.findByUsername(dto.getUsername()).isPresent()) {
-            log.info("Registration Unsuccessful, User already taken {}",dto.getUsername());
+            log.info("Registration Unsuccessful, User already taken {}", dto.getUsername());
             throw new IllegalArgumentException("Username already taken");
         }
 
@@ -58,9 +61,10 @@ public class AuthControllers {
         User saved = usersRepository.save(user);
 
         String token = jwtUtil.generateToken(saved.getUsername());
-        log.info("Registration Successful! {}" , dto.getUsername());
+        String refreshToken = refreshTokenService.createRefreshToken(saved.getUsername());
+        log.info("Registration Successful! {}", dto.getUsername());
         return new ResponseEntity<>(
-                new AuthResponseDto (saved.getId(),saved.getUsername(),token, "Bearer" ),
+                new AuthResponseDto(saved.getId(), saved.getUsername(), token, "Bearer", refreshToken),
                 HttpStatus.CREATED
         );
     }
@@ -87,7 +91,32 @@ public class AuthControllers {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String token = jwtUtil.generateToken(user.getUsername());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getUsername());
         log.info("Login successful: {}", dto.getUsername());
-        return ResponseEntity.ok(new AuthResponseDto(user.getId(), user.getUsername(), token, "Bearer"));
+        return ResponseEntity.ok(new AuthResponseDto(user.getId(), user.getUsername(), token, "Bearer", refreshToken));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponseDto> refresh(@Valid @RequestBody RefreshRequestDto dto) {
+        String username = refreshTokenService.getUsernameFromRefreshToken(dto.getRefreshToken());
+
+        if (username == null) {
+            log.warn("Refresh attempted with invalid or expired refresh token");
+            throw new BadCredentialsException("Invalid or expired refresh token");
+        }
+
+        User user = usersRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        String newAccessToken = jwtUtil.generateToken(user.getUsername());
+        log.info("Access token refreshed for user: {}", username);
+        return ResponseEntity.ok(new AuthResponseDto(user.getId(), user.getUsername(), newAccessToken, "Bearer", dto.getRefreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshRequestDto dto) {
+        refreshTokenService.deleteRefreshToken(dto.getRefreshToken());
+        log.info("User logged out, refresh token invalidated");
+        return ResponseEntity.noContent().build();
     }
 }
