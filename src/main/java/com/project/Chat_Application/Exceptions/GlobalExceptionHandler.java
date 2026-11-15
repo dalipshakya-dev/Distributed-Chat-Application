@@ -4,7 +4,6 @@ import com.project.Chat_Application.Dto.Response.ApiErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -22,6 +21,18 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    // Single place that builds every error response
+    private ResponseEntity<ApiErrorResponse> buildError(HttpStatus status, String message, List<String> details) {
+        ApiErrorResponse error = new ApiErrorResponse(
+                status.value(),
+                status.getReasonPhrase(),
+                message,
+                LocalDateTime.now(),
+                details
+        );
+        return new ResponseEntity<>(error, status);
+    }
 
     // Custom "not found" exception -> 404
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -73,17 +84,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleNoResource(NoResourceFoundException ex) {
         return buildError(HttpStatus.NOT_FOUND, "Endpoint not found", null);
     }
-    // Single place that builds every error response
-    private ResponseEntity<ApiErrorResponse> buildError(HttpStatus status, String message, List<String> details) {
-        ApiErrorResponse error = new ApiErrorResponse(
-                status.value(),
-                status.getReasonPhrase(),
-                message,
-                LocalDateTime.now(),
-                details
-        );
-        return new ResponseEntity<>(error, status);
-    }
+
 
     @ExceptionHandler(RateLimitExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleRateLimitExceeded(RateLimitExceededException ex) {

@@ -361,4 +361,18 @@ class ConversationParticipantServiceTest {
         long result = conversationParticipantService.getMySQLUnreadCount(conversationId,userId);
         assertEquals(5L,result);
     }
+
+    @Test
+    void markAsRead_marksOtherUsersMessagesAsRead_whenAuthorized(){
+        Long userId = 1L;
+        Long conversationId = 100L;
+        ConversationParticipant participant = new ConversationParticipant();
+        when(conversationParticipantRepository.findByUserIdAndConversationId(userId,conversationId)).thenReturn(Optional.of(participant));
+
+        conversationParticipantService.markAsRead(conversationId,userId);
+
+        verify(conversationParticipantRepository).save(participant);
+        verify(stringRedisTemplate).delete("unread:" + userId + ":" + conversationId);
+        verify(messageRepository).markMessagesAsRead(conversationId,userId);
+    }
 }

@@ -12,17 +12,15 @@ import com.project.Chat_Application.Repositories.ConversationRepository;
 import com.project.Chat_Application.Repositories.MessageRepository;
 import com.project.Chat_Application.Repositories.UsersRepository;
 import com.project.Chat_Application.Service.Interfaces.ConversationParticipantInterface;
+import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cglib.core.Local;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.data.redis.core.StringRedisTemplate;
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -142,6 +140,7 @@ public class ConversationParticipantService implements ConversationParticipantIn
     }
 
     @Override
+    @Transactional
     public void markAsRead(Long conversationId, Long currentUserId) {
         if (!isParticipant(currentUserId, conversationId)) {
             throw new AccessDeniedException("You are not a participant in this conversation");
@@ -152,7 +151,8 @@ public class ConversationParticipantService implements ConversationParticipantIn
         cp.setLastReadAt(LocalDateTime.now());
         conversationParticipantRepository.save(cp);
 
-        // reset Redis unread counter
+        messageRepository.markMessagesAsRead(conversationId, currentUserId);
+
         String key = "unread:" + currentUserId + ":" + conversationId;
         stringRedisTemplate.delete(key);
         log.info("Reset unread count for userId={} in conversationId={}", currentUserId, conversationId);
