@@ -1,8 +1,6 @@
 package com.project.Chat_Application.Repositories;
 
 import com.project.Chat_Application.Entities.Conversation;
-import com.project.Chat_Application.Entities.ConversationParticipant;
-import com.project.Chat_Application.Entities.Message;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
