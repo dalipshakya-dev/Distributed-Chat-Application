@@ -7,6 +7,7 @@ import com.project.Chat_Application.Security.CustomUserDetails;
 import com.project.Chat_Application.Service.Interfaces.UserInterface;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,7 +30,7 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<PagedResponseDto<UsersResponseDto>> getAllUsers(Pageable pageable){
+    public ResponseEntity<PagedResponseDto<UsersResponseDto>> getAllUsers(@PageableDefault(5) Pageable pageable){
         return ResponseEntity.ok(userInterface.getAllUsers(pageable));
     }
 

@@ -7,6 +7,7 @@ import com.project.Chat_Application.Security.CustomUserDetails;
 import com.project.Chat_Application.Service.Interfaces.ConversationInterface;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,7 +36,7 @@ public class ConversationController {
     }
 
     @GetMapping
-    public ResponseEntity<PagedResponseDto<ConversationResponseDto>> getAllConversations(Pageable page,@AuthenticationPrincipal CustomUserDetails currUser){
+    public ResponseEntity<PagedResponseDto<ConversationResponseDto>> getAllConversations(@PageableDefault(5) Pageable page, @AuthenticationPrincipal CustomUserDetails currUser){
         Long currUserId = currUser.getId();
         return ResponseEntity.ok(conversationInterface.getAllConversation(page,currUserId));
     }
