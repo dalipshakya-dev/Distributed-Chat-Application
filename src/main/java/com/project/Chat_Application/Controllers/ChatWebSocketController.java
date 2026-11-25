@@ -11,6 +11,7 @@ import com.project.Chat_Application.Observability.CorrelationId;
 import com.project.Chat_Application.Service.Interfaces.ConversationParticipantInterface;
 import com.project.Chat_Application.Service.Interfaces.MessageInterface;
 import com.project.Chat_Application.Service.Interfaces.UserInterface;
+import io.lettuce.core.RedisCommandTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
@@ -81,6 +82,14 @@ public class ChatWebSocketController {
     public String handleRateLimitExceeded(RateLimitExceededException ex) {
         log.warn("STOMP rate limit exceeded: {}", ex.getMessage());
         return ex.getMessage();
+    }
+
+
+    @MessageExceptionHandler(RedisCommandTimeoutException.class)
+    @SendToUser("/queue/errors")
+    public String handleRedisTimeout(RedisCommandTimeoutException ex) {
+        log.error("Redis command timed out while processing STOMP message", ex);
+        return "Message service is temporarily unavailable. Please try again.";
     }
 
     @MessageExceptionHandler(Exception.class)
